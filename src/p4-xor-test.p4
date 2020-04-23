@@ -35,10 +35,14 @@ header ipv4_t {
 
 struct metadata {
     /* empty */
-    bit<32>     xor_before1;
-    bit<32>     xor_before2;
-    bit<32>     xor_after1;
-    bit<32>     xor_after2;
+    bit<32>     before1;
+    bit<32>     before2;
+    bit<32>     before3;
+    bit<32>     before4;
+    bit<32>     after1;
+    bit<32>     after2;
+    bit<32>     after3;
+    bit<32>     after4;
 }
 
 struct headers {
@@ -94,29 +98,41 @@ control MyIngress(inout headers hdr,
     action drop() {
         mark_to_drop(standard_metadata);
     }
+    
 
-    action xor_srcAddr () {
-        meta.xor_before1 = hdr.ipv4.srcAddr;
+    action srcAddr () {
+        meta.before1 = hdr.ipv4.srcAddr;
         hdr.ipv4.srcAddr = hdr.ipv4.srcAddr ^ 32w0x12345678;
-        meta.xor_after1 = hdr.ipv4.srcAddr;
+        meta.after1 = hdr.ipv4.srcAddr;
     }
 
-    action xor_dstAddr(){
-        meta.xor_before2 = hdr.ipv4.dstAddr;
+    action dstAddr(){
+        if (hdr.ethernet.isValid()) {
+            // Do nothing here
+            hdr.ipv4.protocol = hdr.ipv4.protocol ^ 1; 
+        }
+        meta.before2 = hdr.ipv4.dstAddr;
         hdr.ipv4.dstAddr = hdr.ipv4.dstAddr ^ 32w0x12345678;
-        meta.xor_after2 = hdr.ipv4.dstAddr;
+        meta.after2 = hdr.ipv4.dstAddr;
     }
     
-    action ip_forward(egressSpec_t port) {
+    action forward_and_do_something(egressSpec_t port) {
         standard_metadata.egress_spec = port;
 
         if(hdr.ipv4.isValid()) {
-            xor_srcAddr();
+            srcAddr();
         }
         if(hdr.ethernet.isValid()) {
-            xor_dstAddr();
+            dstAddr();
         }
-        
+
+        meta.before3 = hdr.ipv4.srcAddr;
+        hdr.ipv4.srcAddr = hdr.ipv4.srcAddr ^ 32w0x12345678;
+        meta.after3 = hdr.ipv4.srcAddr;
+
+        meta.before4 = hdr.ipv4.dstAddr;
+        hdr.ipv4.dstAddr = hdr.ipv4.dstAddr ^ 32w0x12345678;
+        meta.after4 = hdr.ipv4.dstAddr;
     }
     
     table ipv4_lpm {
@@ -124,22 +140,26 @@ control MyIngress(inout headers hdr,
             standard_metadata.ingress_port : exact;
         }
         actions = {
-            ip_forward;
+            forward_and_do_something;
             NoAction;
         }
         const entries = {
-            1 : ip_forward(2);
-            2 : ip_forward(1);
+            1 : forward_and_do_something(2);
+            2 : forward_and_do_something(1);
         }
         default_action = NoAction();
     }
 
     table debug {
         key = {
-            meta.xor_before1 : exact;
-            meta.xor_after1 : exact;
-            meta.xor_before2 : exact;
-            meta.xor_after2 : exact;
+            meta.before1 : exact;
+            meta.after1 : exact;
+            meta.before2 : exact;
+            meta.after2 : exact;
+            meta.after3 : exact;
+            meta.before3 : exact;
+            meta.after4 : exact;
+            meta.before4 : exact;
         }
         actions = {
             NoAction;
