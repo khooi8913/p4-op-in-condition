@@ -1,0 +1,6 @@
+{
+  "target": "bmv2",
+  "p4info": "build/p4-xor-test.p4.p4info.txt",
+  "bmv2_json": "build/p4-xor-test.json",
+  "table_entries": [ ]
+}
