@@ -156,10 +156,10 @@ control MyIngress(inout headers hdr,
             meta.after1 : exact;
             meta.before2 : exact;
             meta.after2 : exact;
-            meta.after3 : exact;
             meta.before3 : exact;
-            meta.after4 : exact;
+            meta.after3 : exact;
             meta.before4 : exact;
+            meta.after4 : exact;
         }
         actions = {
             NoAction;
